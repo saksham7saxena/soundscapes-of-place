@@ -50,7 +50,7 @@ class AudioEngine {
   // Initialize the context
   public async init(): Promise<void> {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') {
+      if (this.ctx.state !== 'running') {
         try {
           await this.ctx.resume();
         } catch (e) {
@@ -108,7 +108,7 @@ class AudioEngine {
       };
 
       // Try to resume if it starts suspended
-      if (this.ctx.state === 'suspended') {
+      if (this.ctx.state !== 'running') {
         try {
           await this.ctx.resume();
         } catch (e) {

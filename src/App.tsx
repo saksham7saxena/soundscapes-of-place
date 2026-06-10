@@ -24,7 +24,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Listen to AudioEngine state changes and window-level gestures
+  // Listen to AudioEngine state changes
   useEffect(() => {
     const checkAudioState = () => {
       const state = audioEngine.getState();
@@ -41,21 +41,28 @@ export const App: React.FC = () => {
     // Listen to changes
     audioEngine.addStateListener(checkAudioState);
 
-    // Global gesture listener to unlock/resume context automatically on any touch or click
-    const handleGlobalInteraction = async () => {
-      await audioEngine.init();
-      checkAudioState();
-    };
-
-    window.addEventListener('click', handleGlobalInteraction, { capture: true, once: true });
-    window.addEventListener('touchstart', handleGlobalInteraction, { capture: true, once: true });
-
     return () => {
       audioEngine.removeStateListener(checkAudioState);
-      window.removeEventListener('click', handleGlobalInteraction);
-      window.removeEventListener('touchstart', handleGlobalInteraction);
     };
   }, []);
+
+  // Global interaction handler to unlock/resume context
+  useEffect(() => {
+    if (!needsGesture) return;
+
+    const handleGlobalInteraction = async () => {
+      await audioEngine.init();
+    };
+
+    // Attach click and touchend for maximum mobile browser compatibility
+    window.addEventListener('click', handleGlobalInteraction, { capture: true });
+    window.addEventListener('touchend', handleGlobalInteraction, { capture: true });
+
+    return () => {
+      window.removeEventListener('click', handleGlobalInteraction);
+      window.removeEventListener('touchend', handleGlobalInteraction);
+    };
+  }, [needsGesture]);
 
   // Synchronize audio engine volume/mute states
   useEffect(() => {
