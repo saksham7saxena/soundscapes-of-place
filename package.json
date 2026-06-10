@@ -16,6 +16,10 @@
     "react-dom": "^19.2.6",
     "tailwindcss": "^4.3.0"
   },
+  "optionalDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "^1.0.3",
+    "@rolldown/binding-linux-x64-gnu": "^1.0.3"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
