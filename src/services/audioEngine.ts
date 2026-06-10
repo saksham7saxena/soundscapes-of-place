@@ -555,6 +555,8 @@ class AudioEngine {
         formant1.type = 'bandpass';
         formant2.type = 'bandpass';
         
+        let stopTime = now + 1.0;
+
         if (baseFreq === 220) {
           // Delhi chai vendor voice ("Chai-i!")
           osc1.frequency.setValueAtTime(160, now);
@@ -580,8 +582,7 @@ class AudioEngine {
           voiceGain.gain.setValueAtTime(0.15, now + 0.5);
           voiceGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
           
-          osc1.stop(now + 1.0);
-          osc2.stop(now + 1.0);
+          stopTime = now + 1.0;
         } else {
           // Rio beach vendor voice ("Olha-a!")
           osc1.frequency.setValueAtTime(240, now);
@@ -606,8 +607,7 @@ class AudioEngine {
           voiceGain.gain.setValueAtTime(0.12, now + 0.6);
           voiceGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
           
-          osc1.stop(now + 1.1);
-          osc2.stop(now + 1.1);
+          stopTime = now + 1.1;
         }
         
         // Add subtle throat noise (soft breath friction)
@@ -643,6 +643,10 @@ class AudioEngine {
         osc1.start(now);
         osc2.start(now);
         noiseNode.start(now);
+
+        osc1.stop(stopTime);
+        osc2.stop(stopTime);
+        noiseNode.stop(stopTime);
       };
 
       triggerCry();
