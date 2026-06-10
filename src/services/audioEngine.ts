@@ -12,6 +12,7 @@ class AudioEngine {
   }> = new Map();
   private volume: number = 0.6; // Default master volume
   private isMuted: boolean = false;
+  private stateListeners: Set<() => void> = new Set();
 
   constructor() {
     // We don't initialize here to prevent browser blocking.
@@ -23,11 +24,38 @@ class AudioEngine {
     return this.analyser;
   }
 
+  // State subscription methods for React integration
+  public addStateListener(listener: () => void) {
+    this.stateListeners.add(listener);
+  }
+
+  public removeStateListener(listener: () => void) {
+    this.stateListeners.delete(listener);
+  }
+
+  private notifyStateListeners() {
+    this.stateListeners.forEach(listener => {
+      try {
+        listener();
+      } catch (e) {
+        console.error('State listener failed:', e);
+      }
+    });
+  }
+
+  public getState(): string {
+    return this.ctx ? this.ctx.state : 'uninitialized';
+  }
+
   // Initialize the context
-  public init() {
+  public async init(): Promise<void> {
     if (this.ctx) {
       if (this.ctx.state === 'suspended') {
-        this.ctx.resume();
+        try {
+          await this.ctx.resume();
+        } catch (e) {
+          console.error('Failed to resume AudioContext:', e);
+        }
       }
       return;
     }
@@ -73,8 +101,45 @@ class AudioEngine {
       
       this.masterGain.connect(this.analyser);
       this.analyser.connect(this.ctx.destination);
+
+      // Listen to state changes on the AudioContext
+      this.ctx.onstatechange = () => {
+        this.notifyStateListeners();
+      };
+
+      // Try to resume if it starts suspended
+      if (this.ctx.state === 'suspended') {
+        try {
+          await this.ctx.resume();
+        } catch (e) {
+          console.error('Failed to resume AudioContext during creation:', e);
+        }
+      }
+
+      // Play a short silent buffer to warm up / unlock audio output on iOS
+      this.unlockSilentBuffer();
+      
+      this.notifyStateListeners();
     } catch (e) {
       console.error('Failed to initialize Web Audio API:', e);
+    }
+  }
+
+  private unlockSilentBuffer() {
+    if (!this.ctx) return;
+    try {
+      const buffer = this.ctx.createBuffer(1, 1, 22050);
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(this.ctx.destination);
+      source.start(0);
+      source.onended = () => {
+        try {
+          source.disconnect();
+        } catch (e) {}
+      };
+    } catch (e) {
+      console.warn('Failed to play silent buffer:', e);
     }
   }
 
@@ -120,8 +185,8 @@ class AudioEngine {
   }
 
   // Start playing a sound
-  public startSound(soundId: string, synthType: string, params: any) {
-    this.init(); // Auto-init if not done
+  public async startSound(soundId: string, synthType: string, params: any) {
+    await this.init(); // Auto-init if not done
 
     if (!this.ctx || !this.compressor) return;
 

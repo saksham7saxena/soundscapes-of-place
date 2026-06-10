@@ -17,10 +17,45 @@ export const App: React.FC = () => {
   const animationRef = useRef<number | null>(null);
 
   // Initialize/unlock audio on interaction
-  const unlockAudio = () => {
-    audioEngine.init();
-    setNeedsGesture(false);
+  const unlockAudio = async () => {
+    await audioEngine.init();
+    if (audioEngine.getState() === 'running') {
+      setNeedsGesture(false);
+    }
   };
+
+  // Listen to AudioEngine state changes and window-level gestures
+  useEffect(() => {
+    const checkAudioState = () => {
+      const state = audioEngine.getState();
+      if (state === 'running') {
+        setNeedsGesture(false);
+      } else {
+        setNeedsGesture(true);
+      }
+    };
+
+    // Check initially
+    checkAudioState();
+
+    // Listen to changes
+    audioEngine.addStateListener(checkAudioState);
+
+    // Global gesture listener to unlock/resume context automatically on any touch or click
+    const handleGlobalInteraction = async () => {
+      await audioEngine.init();
+      checkAudioState();
+    };
+
+    window.addEventListener('click', handleGlobalInteraction, { capture: true, once: true });
+    window.addEventListener('touchstart', handleGlobalInteraction, { capture: true, once: true });
+
+    return () => {
+      audioEngine.removeStateListener(checkAudioState);
+      window.removeEventListener('click', handleGlobalInteraction);
+      window.removeEventListener('touchstart', handleGlobalInteraction);
+    };
+  }, []);
 
   // Synchronize audio engine volume/mute states
   useEffect(() => {
@@ -34,17 +69,17 @@ export const App: React.FC = () => {
   }, [isMuted]);
 
   // Handle active city transition
-  const handleCityChange = (city: City) => {
+  const handleCityChange = async (city: City) => {
     audioEngine.stopAll();
     setActiveSounds([]);
     setActiveCity(city);
-    audioEngine.init();
+    await audioEngine.init();
   };
 
   // Toggle a specific sound on/off
-  const handleSoundToggle = (sound: Sound) => {
+  const handleSoundToggle = async (sound: Sound) => {
     if (needsGesture) {
-      unlockAudio();
+      await unlockAudio();
     }
 
     const isPlaying = activeSounds.includes(sound.id);
@@ -52,7 +87,7 @@ export const App: React.FC = () => {
       audioEngine.stopSound(sound.id);
       setActiveSounds(prev => prev.filter(id => id !== sound.id));
     } else {
-      audioEngine.startSound(sound.id, sound.synthType, sound.params);
+      await audioEngine.startSound(sound.id, sound.synthType, sound.params);
       setActiveSounds(prev => [...prev, sound.id]);
     }
   };
@@ -64,9 +99,9 @@ export const App: React.FC = () => {
   };
 
   // Compose a random soundscape for the active city
-  const handleRandomCompose = () => {
+  const handleRandomCompose = async () => {
     if (needsGesture) {
-      unlockAudio();
+      await unlockAudio();
     }
 
     audioEngine.stopAll();
@@ -77,10 +112,10 @@ export const App: React.FC = () => {
     const selected = shuffled.slice(0, numSounds);
 
     const newActiveIds: string[] = [];
-    selected.forEach(sound => {
-      audioEngine.startSound(sound.id, sound.synthType, sound.params);
+    for (const sound of selected) {
+      await audioEngine.startSound(sound.id, sound.synthType, sound.params);
       newActiveIds.push(sound.id);
-    });
+    }
 
     setActiveSounds(newActiveIds);
   };
