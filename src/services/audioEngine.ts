@@ -309,10 +309,16 @@ class AudioEngine {
     const filterFreq = params.filterFreq || 1000;
     const pan = params.pan || 0;
 
-    // Create Stereo Panner
-    const panner = this.ctx.createStereoPanner();
-    panner.pan.setValueAtTime(pan, this.ctx.currentTime);
-    panner.connect(gainNode);
+    // Create Stereo Panner (defensively fallback if unsupported in some mobile browsers/webviews)
+    let panner: any;
+    if (this.ctx.createStereoPanner) {
+      panner = this.ctx.createStereoPanner();
+      panner.pan.setValueAtTime(pan, this.ctx.currentTime);
+      panner.connect(gainNode);
+    } else {
+      panner = this.ctx.createGain();
+      panner.connect(gainNode);
+    }
 
     // Setup Filter
     const filter = this.ctx.createBiquadFilter();
