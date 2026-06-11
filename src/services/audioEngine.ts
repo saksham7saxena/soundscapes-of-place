@@ -48,11 +48,12 @@ class AudioEngine {
   }
 
   // Initialize the context
-  public async init(): Promise<void> {
+  public init(): void {
     if (this.ctx) {
       if (this.ctx.state !== 'running') {
         try {
-          await this.ctx.resume();
+          this.ctx.resume().catch(e => console.error('Failed to resume AudioContext:', e));
+          this.unlockSilentBuffer();
         } catch (e) {
           console.error('Failed to resume AudioContext:', e);
         }
@@ -61,6 +62,15 @@ class AudioEngine {
     }
 
     try {
+      // Set audioSession category/type on iOS Safari to playback to bypass silent switch if available
+      if (typeof navigator !== 'undefined' && (navigator as any).audioSession) {
+        try {
+          (navigator as any).audioSession.type = 'playback';
+        } catch (e) {
+          console.warn('Failed to set audioSession type:', e);
+        }
+      }
+
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       this.ctx = new AudioCtx();
       
@@ -109,11 +119,7 @@ class AudioEngine {
 
       // Try to resume if it starts suspended
       if (this.ctx.state !== 'running') {
-        try {
-          await this.ctx.resume();
-        } catch (e) {
-          console.error('Failed to resume AudioContext during creation:', e);
-        }
+        this.ctx.resume().catch(e => console.error('Failed to resume AudioContext during creation:', e));
       }
 
       // Play a short silent buffer to warm up / unlock audio output on iOS
@@ -185,8 +191,8 @@ class AudioEngine {
   }
 
   // Start playing a sound
-  public async startSound(soundId: string, synthType: string, params: any) {
-    await this.init(); // Auto-init if not done
+  public startSound(soundId: string, synthType: string, params: any) {
+    this.init(); // Auto-init if not done
 
     if (!this.ctx || !this.compressor) return;
 

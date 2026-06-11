@@ -17,8 +17,8 @@ export const App: React.FC = () => {
   const animationRef = useRef<number | null>(null);
 
   // Initialize/unlock audio on interaction
-  const unlockAudio = async () => {
-    await audioEngine.init();
+  const unlockAudio = () => {
+    audioEngine.init();
     if (audioEngine.getState() === 'running') {
       setNeedsGesture(false);
     }
@@ -50,8 +50,8 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (!needsGesture) return;
 
-    const handleGlobalInteraction = async () => {
-      await audioEngine.init();
+    const handleGlobalInteraction = () => {
+      audioEngine.init();
     };
 
     // Attach click and touchend for maximum mobile browser compatibility
@@ -76,17 +76,17 @@ export const App: React.FC = () => {
   }, [isMuted]);
 
   // Handle active city transition
-  const handleCityChange = async (city: City) => {
+  const handleCityChange = (city: City) => {
     audioEngine.stopAll();
     setActiveSounds([]);
     setActiveCity(city);
-    await audioEngine.init();
+    audioEngine.init();
   };
 
   // Toggle a specific sound on/off
-  const handleSoundToggle = async (sound: Sound) => {
+  const handleSoundToggle = (sound: Sound) => {
     if (needsGesture) {
-      await unlockAudio();
+      unlockAudio();
     }
 
     const isPlaying = activeSounds.includes(sound.id);
@@ -94,7 +94,7 @@ export const App: React.FC = () => {
       audioEngine.stopSound(sound.id);
       setActiveSounds(prev => prev.filter(id => id !== sound.id));
     } else {
-      await audioEngine.startSound(sound.id, sound.synthType, sound.params);
+      audioEngine.startSound(sound.id, sound.synthType, sound.params);
       setActiveSounds(prev => [...prev, sound.id]);
     }
   };
@@ -106,9 +106,9 @@ export const App: React.FC = () => {
   };
 
   // Compose a random soundscape for the active city
-  const handleRandomCompose = async () => {
+  const handleRandomCompose = () => {
     if (needsGesture) {
-      await unlockAudio();
+      unlockAudio();
     }
 
     audioEngine.stopAll();
@@ -120,7 +120,7 @@ export const App: React.FC = () => {
 
     const newActiveIds: string[] = [];
     for (const sound of selected) {
-      await audioEngine.startSound(sound.id, sound.synthType, sound.params);
+      audioEngine.startSound(sound.id, sound.synthType, sound.params);
       newActiveIds.push(sound.id);
     }
 
